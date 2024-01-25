@@ -58,9 +58,9 @@ add_link_options(-T ${LINKER_SCRIPT})
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB)
 
 ## ----------------------- HAL -----------------------
-file(GLOB HAL_SOURCES CONFIGURE_DEPENDS Drivers/STM32F1xx_HAL_Driver/Src/*.c)
-add_library(HAL STATIC ${HAL_SOURCES})
-target_include_directories(HAL PUBLIC 
+file(GLOB hal_sources CONFIGURE_DEPENDS Drivers/STM32F1xx_HAL_Driver/Src/*.c)
+add_library(hal STATIC ${hal_sources})
+target_include_directories(hal PUBLIC 
     Core/Inc 
     Drivers/STM32F1xx_HAL_Driver/Inc 
     Drivers/CMSIS/Device/ST/STM32F1xx/Include 
@@ -76,16 +76,32 @@ target_include_directories(freertos_config INTERFACE
 set(FREERTOS_PORT GCC_ARM_CM3 CACHE STRING "GCC_ARM_CM3")
 add_subdirectory(FreeRTOS-Kernel)
 
+## ----------------------- USER -----------------------
+file(GLOB user_sources CONFIGURE_DEPENDS User/*.c User/*.cpp Diagnostic/*.c Diagnostic/*.cpp)
+add_library(user STATIC ${user_sources})
+target_include_directories(user PUBLIC 
+    Core/Inc 
+    User
+    Drivers/STM32F1xx_HAL_Driver/Inc 
+    Drivers/CMSIS/Device/ST/STM32F1xx/Include 
+    Drivers/CMSIS/Include
+    FreeRTOS-Kernel/include
+    "$<TARGET_PROPERTY:freertos_kernel_port,INTERFACE_INCLUDE_DIRECTORIES>"
+)
+
 ## ----------------------- MAIN -----------------------
 file(GLOB MAIN_SOURCES CONFIGURE_DEPENDS "Core/Src/*.c" "Core/Src/*.cpp" startup_stm32f103xb.s)
 add_executable(${PROJECT_NAME}.elf ${MAIN_SOURCES} ${LINKER_SCRIPT})
 target_include_directories(${PROJECT_NAME}.elf PUBLIC 
     Core/Inc 
+    User
     Drivers/STM32F1xx_HAL_Driver/Inc 
     Drivers/CMSIS/Device/ST/STM32F1xx/Include 
     Drivers/CMSIS/Include
+    FreeRTOS-Kernel/include
+    "$<TARGET_PROPERTY:freertos_kernel_port,INTERFACE_INCLUDE_DIRECTORIES>"
 )
-target_link_libraries(${PROJECT_NAME}.elf HAL freertos_kernel freertos_config)
+target_link_libraries(${PROJECT_NAME}.elf freertos_kernel hal user)
 
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     # COMMENT "Building ${PROJECT_NAME}.hex and ${PROJECT_NAME}.bin"
