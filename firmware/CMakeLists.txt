@@ -4,8 +4,8 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # re-create build directory if you want to change the default toolchain
 # set(STM32_TOOLCHAIN_PATH "~/Software/arm-none-eabi-13.2")
-set(STM32_TOOLCHAIN_PATH "~/Software/arm-none-eabi-12.3")
-# set(STM32_TOOLCHAIN_PATH "~/Software/arm-none-eabi-11.3")
+# set(STM32_TOOLCHAIN_PATH "~/Software/arm-none-eabi-12.3")
+set(STM32_TOOLCHAIN_PATH "~/Software/arm-none-eabi-11.3")
 if(DEFINED ENV{STM32_TOOLCHAIN_PATH})
     message(STATUS "Detected STM32_TOOLCHAIN_PATH in environmental variables")
     set(STM32_TOOLCHAIN_PATH $ENV{STM32_TOOLCHAIN_PATH})
@@ -44,15 +44,20 @@ project(Dual-FOC C CXX ASM)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
-add_compile_options(-mcpu=cortex-m3 -mthumb -mthumb-interwork)
-add_compile_options(-Wall -ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
+# THIS IS VERY IMPORTANT
+set(CMAKE_CXX_FLAGS "-fno-exceptions")
+
+add_compile_options(-mcpu=cortex-m3 -mthumb -mthumb-interwork -Wfatal-errors)
+add_compile_options(-Wall -ffreestanding -ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
 add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-x$<SEMICOLON>assembler-with-cpp>)
-add_compile_options(-Og -g -gdwarf-2)
+add_compile_options(-O0 -g -gdwarf-2 -specs=nano.specs)
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F103C8Tx_FLASH.ld)
-add_link_options(-Wl,-gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map)
+add_link_options(-Wl,-gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map,--cref)
 add_link_options(-mcpu=cortex-m3 -mthumb -mthumb-interwork)
-# add_link_options(-lc -lm -lnosys -specs=nosys.specs)
+add_link_options(-lc -lm -lnosys -specs=nano.specs)
+# add_link_options(-lnosys -specs=nosys.specs)
+# add_link_options(-lgcc -lc -lm)
 add_link_options(-T ${LINKER_SCRIPT})
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB)
@@ -73,6 +78,7 @@ target_include_directories(freertos_config INTERFACE
     INTERFACE 
     User
 )
+# set(FREERTOS_HEAP 4 CACHE STRING "4")
 set(FREERTOS_PORT GCC_ARM_CM3 CACHE STRING "GCC_ARM_CM3")
 add_subdirectory(FreeRTOS-Kernel)
 
